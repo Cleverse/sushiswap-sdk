@@ -1,5 +1,5 @@
 {
-  "name": "@sushiswap/sdk",
+  "name": "whatthefar-sushiswap-sdk",
   "license": "MIT",
   "version": "5.0.0-canary.119",
   "description": "🛠 An SDK for building applications on top of SushiSwap.",
