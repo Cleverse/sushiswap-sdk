@@ -18,7 +18,7 @@ export class Pair {
     return computePairAddress({
       factoryAddress: FACTORY_ADDRESS[tokenA.chainId],
       tokenA,
-      tokenB
+      tokenB,
     })
   }
 
@@ -97,14 +97,15 @@ export class Pair {
     return token.equals(this.token0) ? this.reserve0 : this.reserve1
   }
 
-  public getOutputAmount(inputAmount: CurrencyAmount<Token>): [CurrencyAmount<Token>, Pair] {
+  public getOutputAmount(inputAmount: CurrencyAmount<Token>, fee: number): [CurrencyAmount<Token>, Pair] {
     invariant(this.involvesToken(inputAmount.currency), 'TOKEN')
     if (JSBI.equal(this.reserve0.quotient, ZERO) || JSBI.equal(this.reserve1.quotient, ZERO)) {
       throw new InsufficientReservesError()
     }
+
     const inputReserve = this.reserveOf(inputAmount.currency)
     const outputReserve = this.reserveOf(inputAmount.currency.equals(this.token0) ? this.token1 : this.token0)
-    const inputAmountWithFee = JSBI.multiply(inputAmount.quotient, _997)
+    const inputAmountWithFee = JSBI.multiply(inputAmount.quotient, JSBI.BigInt(fee))
     const numerator = JSBI.multiply(inputAmountWithFee, outputReserve.quotient)
     const denominator = JSBI.add(JSBI.multiply(inputReserve.quotient, _1000), inputAmountWithFee)
     const outputAmount = CurrencyAmount.fromRawAmount(

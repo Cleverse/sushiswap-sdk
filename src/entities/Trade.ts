@@ -1,4 +1,4 @@
-import { ONE, ZERO } from '../constants'
+import { ONE, ZERO, _997 } from '../constants'
 
 import { Currency } from './Currency'
 import { CurrencyAmount } from './CurrencyAmount'
@@ -107,6 +107,11 @@ export class Trade<TInput extends Currency, TOutput extends Currency, TTradeType
   public readonly priceImpact: Percent
 
   /**
+   * fee of each dexes.
+   */
+  public readonly fee: number
+
+  /**
    * Constructs an exact in trade with the given amount in and route
    * @param route route of the exact in trade
    * @param amountIn the amount being passed in
@@ -133,10 +138,12 @@ export class Trade<TInput extends Currency, TOutput extends Currency, TTradeType
   public constructor(
     route: Route<TInput, TOutput>,
     amount: TTradeType extends TradeType.EXACT_INPUT ? CurrencyAmount<TInput> : CurrencyAmount<TOutput>,
-    tradeType: TTradeType
+    tradeType: TTradeType,
+    fee?: number
   ) {
     this.route = route
     this.tradeType = tradeType
+    this.fee = fee ?? 997
 
     const tokenAmounts: CurrencyAmount<Token>[] = new Array(route.path.length)
     if (tradeType === TradeType.EXACT_INPUT) {
@@ -144,7 +151,7 @@ export class Trade<TInput extends Currency, TOutput extends Currency, TTradeType
       tokenAmounts[0] = amount.wrapped
       for (let i = 0; i < route.path.length - 1; i++) {
         const pair = route.pairs[i]
-        const [outputAmount] = pair.getOutputAmount(tokenAmounts[i])
+        const [outputAmount] = pair.getOutputAmount(tokenAmounts[i], this.fee)
         tokenAmounts[i + 1] = outputAmount
       }
       this.inputAmount = CurrencyAmount.fromFractionalAmount(route.input, amount.numerator, amount.denominator)
@@ -203,8 +210,9 @@ export class Trade<TInput extends Currency, TOutput extends Currency, TTradeType
     if (this.tradeType === TradeType.EXACT_INPUT) {
       return this.inputAmount
     } else {
-      const slippageAdjustedAmountIn = new Fraction(ONE).add(slippageTolerance).multiply(this.inputAmount.quotient)
-        .quotient
+      const slippageAdjustedAmountIn = new Fraction(ONE)
+        .add(slippageTolerance)
+        .multiply(this.inputAmount.quotient).quotient
       return CurrencyAmount.fromRawAmount(this.inputAmount.currency, slippageAdjustedAmountIn)
     }
   }
@@ -227,6 +235,7 @@ export class Trade<TInput extends Currency, TOutput extends Currency, TTradeType
     pairs: Pair[],
     currencyAmountIn: CurrencyAmount<TInput>,
     currencyOut: TOutput,
+    fee: number,
     { maxNumResults = 3, maxHops = 3 }: BestTradeOptions = {},
     // used in recursion.
     currentPairs: Pair[] = [],
@@ -247,7 +256,7 @@ export class Trade<TInput extends Currency, TOutput extends Currency, TTradeType
 
       let amountOut: CurrencyAmount<Token>
       try {
-        ;[amountOut] = pair.getOutputAmount(amountIn)
+        ;[amountOut] = pair.getOutputAmount(amountIn, fee)
       } catch (error) {
         // input too low
         if (error.isInsufficientInputAmountError) {
@@ -262,7 +271,8 @@ export class Trade<TInput extends Currency, TOutput extends Currency, TTradeType
           new Trade(
             new Route([...currentPairs, pair], currencyAmountIn.currency, currencyOut),
             currencyAmountIn,
-            TradeType.EXACT_INPUT
+            TradeType.EXACT_INPUT,
+            fee
           ),
           maxNumResults,
           tradeComparator
@@ -275,9 +285,10 @@ export class Trade<TInput extends Currency, TOutput extends Currency, TTradeType
           pairsExcludingThisPair,
           currencyAmountIn,
           currencyOut,
+          fee,
           {
             maxNumResults,
-            maxHops: maxHops - 1
+            maxHops: maxHops - 1,
           },
           [...currentPairs, pair],
           amountOut,
@@ -371,7 +382,7 @@ export class Trade<TInput extends Currency, TOutput extends Currency, TTradeType
           currencyAmountOut,
           {
             maxNumResults,
-            maxHops: maxHops - 1
+            maxHops: maxHops - 1,
           },
           [pair, ...currentPairs],
           amountIn,
