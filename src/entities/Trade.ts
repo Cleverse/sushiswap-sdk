@@ -107,11 +107,6 @@ export class Trade<TInput extends Currency, TOutput extends Currency, TTradeType
   public readonly priceImpact: Percent
 
   /**
-   * fee of each dexes.
-   */
-  public readonly fee: number
-
-  /**
    * Constructs an exact in trade with the given amount in and route
    * @param route route of the exact in trade
    * @param amountIn the amount being passed in
@@ -138,12 +133,10 @@ export class Trade<TInput extends Currency, TOutput extends Currency, TTradeType
   public constructor(
     route: Route<TInput, TOutput>,
     amount: TTradeType extends TradeType.EXACT_INPUT ? CurrencyAmount<TInput> : CurrencyAmount<TOutput>,
-    tradeType: TTradeType,
-    fee?: number
+    tradeType: TTradeType
   ) {
     this.route = route
     this.tradeType = tradeType
-    this.fee = fee ?? 997
 
     const tokenAmounts: CurrencyAmount<Token>[] = new Array(route.path.length)
     if (tradeType === TradeType.EXACT_INPUT) {
