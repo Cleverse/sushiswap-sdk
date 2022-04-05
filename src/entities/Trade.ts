@@ -151,7 +151,7 @@ export class Trade<TInput extends Currency, TOutput extends Currency, TTradeType
       tokenAmounts[0] = amount.wrapped
       for (let i = 0; i < route.path.length - 1; i++) {
         const pair = route.pairs[i]
-        const [outputAmount] = pair.getOutputAmount(tokenAmounts[i], this.fee)
+        const [outputAmount] = pair.getOutputAmount(tokenAmounts[i])
         tokenAmounts[i + 1] = outputAmount
       }
       this.inputAmount = CurrencyAmount.fromFractionalAmount(route.input, amount.numerator, amount.denominator)
@@ -235,7 +235,6 @@ export class Trade<TInput extends Currency, TOutput extends Currency, TTradeType
     pairs: Pair[],
     currencyAmountIn: CurrencyAmount<TInput>,
     currencyOut: TOutput,
-    fee: number,
     { maxNumResults = 3, maxHops = 3 }: BestTradeOptions = {},
     // used in recursion.
     currentPairs: Pair[] = [],
@@ -256,7 +255,7 @@ export class Trade<TInput extends Currency, TOutput extends Currency, TTradeType
 
       let amountOut: CurrencyAmount<Token>
       try {
-        ;[amountOut] = pair.getOutputAmount(amountIn, fee)
+        ;[amountOut] = pair.getOutputAmount(amountIn)
       } catch (error) {
         // input too low
         if (error.isInsufficientInputAmountError) {
@@ -271,8 +270,7 @@ export class Trade<TInput extends Currency, TOutput extends Currency, TTradeType
           new Trade(
             new Route([...currentPairs, pair], currencyAmountIn.currency, currencyOut),
             currencyAmountIn,
-            TradeType.EXACT_INPUT,
-            fee
+            TradeType.EXACT_INPUT
           ),
           maxNumResults,
           tradeComparator
@@ -285,7 +283,6 @@ export class Trade<TInput extends Currency, TOutput extends Currency, TTradeType
           pairsExcludingThisPair,
           currencyAmountIn,
           currencyOut,
-          fee,
           {
             maxNumResults,
             maxHops: maxHops - 1,
